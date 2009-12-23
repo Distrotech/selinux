@@ -21,7 +21,7 @@
 #
 #  
 
-import pwd, grp, string, selinux, tempfile, os, re, sys, stat
+import pwd, grp, string, selinux, tempfile, os, re, sys, stat, shutil
 from semanage import *;
 PROGNAME = "policycoreutils"
 import sepolgen.module as module
@@ -359,7 +359,8 @@ class permissiveRecords(semanageRecords):
 	def add(self, type):
                import glob
                name = "permissive_%s" % type
-               dirname = "/var/lib/selinux"
+               dirname = tempfile.mkdtemp("-semanage")
+               savedir = os.getcwd()
                os.chdir(dirname)
                filename = "%s.te" % name
                modtxt = """
@@ -384,14 +385,8 @@ permissive %s;
                if rc >= 0:
                       self.commit()
 
-               for root, dirs, files in os.walk("tmp", topdown = False):
-                      for name in files:
-                             os.remove(os.path.join(root, name))
-                      for name in dirs:
-                             os.rmdir(os.path.join(root, name))
-               os.removedirs("tmp")
-               for i in glob.glob("permissive_%s.*" % type):
-                      os.remove(i)
+               os.chdir(savedir)
+               shutil.rmtree(dirname)
                if rc < 0:
 			raise ValueError(_("Could not set permissive domain %s (module installation failed)") % name)
 
