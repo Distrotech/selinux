@@ -162,7 +162,6 @@ static void parse_command_line(int argc, char **argv)
 		{"build", 0, NULL, 'B'},
 		{"disable_dontaudit", 0, NULL, 'D'},
 		{"preserve_tunables", 0, NULL, 'P'},
-		{"path", required_argument, NULL, 'p'},
 		{NULL, 0, NULL, 0}
 	};
 	int i;
@@ -171,7 +170,7 @@ static void parse_command_line(int argc, char **argv)
 	no_reload = 0;
 	create_store = 0;
 	while ((i =
-		getopt_long(argc, argv, "p:s:b:hi:lvqr:u:RnBDP", opts,
+		getopt_long(argc, argv, "s:b:hi:lvqr:u:RnBDP", opts,
 			    NULL)) != -1) {
 		switch (i) {
 		case 'b':
@@ -192,9 +191,6 @@ static void parse_command_line(int argc, char **argv)
 			break;
 		case 'r':
 			set_mode(REMOVE_M, optarg);
-			break;
-		case 'p':
-			semanage_set_root(optarg);
 			break;
 		case 'u':
 			set_mode(UPGRADE_M, optarg);
