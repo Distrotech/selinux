@@ -57,7 +57,7 @@ static int parse_errors;
         char *s;
 }
 
-%token MODULE_STORE VERSION ROOT EXPAND_CHECK FILE_MODE SAVE_PREVIOUS SAVE_LINKED
+%token MODULE_STORE VERSION MLS TARGET_PLATFORM ROOT EXPAND_CHECK FILE_MODE SAVE_PREVIOUS SAVE_LINKED
 %token LOAD_POLICY_START SETFILES_START DISABLE_GENHOMEDIRCON HANDLE_UNKNOWN USEPASSWD
 %token BZIP_BLOCKSIZE BZIP_SMALL
 %token VERIFY_MOD_START VERIFY_LINKED_START VERIFY_KERNEL_START BLOCK_END
@@ -78,6 +78,8 @@ config_line:    single_opt
 
 single_opt:     module_store
         |       version
+        |       mls
+        |       target_platform
         |       root
         |       expand_check
         |       file_mode
@@ -115,6 +117,28 @@ version:        VERSION '=' ARG  {
                                 parse_errors++;
                                 YYABORT;
                         }
+                }
+        ;
+
+mls:             MLS '=' ARG  {
+	                if (strcasecmp($3, "true") == 0)
+		                current_conf->mls = 1;
+			else if (strcasecmp($3, "false") == 0)
+				current_conf->mls = 0;		
+			else {
+				yyerror("mls can only be 'true' or 'false'");
+			}
+                }
+        ;
+
+target_platform: TARGET_PLATFORM '=' ARG  {
+	                if (strcasecmp($3, "selinux") == 0)
+		                current_conf->target_platform = SEPOL_TARGET_SELINUX;
+			else if (strcasecmp($3, "xen") == 0)
+				current_conf->target_platform = SEPOL_TARGET_XEN;
+			else {
+				yyerror("target_platform can only be 'selinux' or 'xen'");
+			}
                 }
         ;
 
@@ -273,6 +297,8 @@ static int semanage_conf_init(semanage_conf_t * conf)
 	conf->store_path = strdup(basename(selinux_policy_root()));
 	conf->root_path = strdup("");
 	conf->policyvers = sepol_policy_kern_vers_max();
+	conf->mls = 0;
+	conf->target_platform = SEPOL_TARGET_SELINUX;
 	conf->expand_check = 1;
 	conf->handle_unknown = -1;
 	conf->usepasswd = 1;
