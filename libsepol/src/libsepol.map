@@ -16,5 +16,16 @@
 	sepol_get_disable_dontaudit;
 	sepol_set_disable_dontaudit;
 	sepol_set_expand_consume_base;
+	cil_db_init;
+	cil_db_destroy;
+	cil_add_file;
+	cil_compile;
+	cil_build_policydb;
+	cil_userprefixes_to_string;
+	cil_selinuxusers_to_string;
+	cil_filecons_to_string;
+	cil_set_log_level;
+	cil_set_log_handler;
+	cil_set_malloc_error_handler;
   local: *;
 };
