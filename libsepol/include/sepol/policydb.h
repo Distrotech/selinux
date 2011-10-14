@@ -90,6 +90,17 @@ extern int sepol_policydb_set_vers(sepol_policydb_t * p, unsigned int vers);
 extern int sepol_policydb_set_handle_unknown(sepol_policydb_t * p,
 					     unsigned int handle_unknown);
 
+/* Set wheather or not to build an mls policy. Zero to build nonmls, non-zero
+ * for mls. */
+extern int sepol_policydb_set_mls(sepol_policydb_t * p,
+					     int mls);
+
+/* Set the target platform */
+#define SEPOL_TARGET_SELINUX 0
+#define SEPOL_TARGET_XEN     1
+extern int sepol_policydb_set_target_platform(sepol_policydb_t * p,
+					     int target_platform);
+
 /* 
  * Read a policydb from a policy file.
  * This automatically sets the type and version based on the 
