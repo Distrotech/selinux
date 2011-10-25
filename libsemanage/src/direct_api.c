@@ -1710,7 +1710,6 @@ static int semanage_direct_get_module_info(semanage_handle_t *sh,
 
 	char fn[PATH_MAX];
 	FILE *fp = NULL;
-	const char *modules_path = NULL;
 	size_t size = 0;
 	struct stat sb;
 	char *tmp = NULL;
@@ -1720,12 +1719,6 @@ static int semanage_direct_get_module_info(semanage_handle_t *sh,
 	semanage_module_info_t *modinfos = NULL;
 	int modinfos_len = 0;
 	semanage_module_info_t *highest = NULL;
-
-	if (sh->is_in_transaction) {
-		modules_path = semanage_path(SEMANAGE_TMP, SEMANAGE_MODULES);
-	} else {
-		modules_path = semanage_path(SEMANAGE_ACTIVE, SEMANAGE_MODULES);
-	}
 
 	/* check module name */
 	ret = semanage_module_validate_name(modkey->name);
