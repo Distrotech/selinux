@@ -2682,29 +2682,25 @@ int expand_module_avrules(sepol_handle_t * handle, policydb_t * base,
 	return copy_and_expand_avrule_block(&state);
 }
 
-static void discard_tunables(sepol_handle_t *sh, policydb_t *pol)
+static void discard_tunables(policydb_t *pol)
 {
 	avrule_block_t *block;
 	avrule_decl_t *decl;
 	cond_node_t *cur_node;
 	cond_expr_t *cur_expr;
-	int cur_state, preserve_tunables = 0;
+	int cur_state;
 	avrule_t *tail, *to_be_appended;
 
-	if (sh && sh->preserve_tunables)
-		preserve_tunables = 1;
-
 	/* Iterate through all cond_node of all enabled decls, if a cond_node
-	 * is about tunable, calculate its state value and concatenate one of
-	 * its avrule list to the current decl->avrules list. On the other
-	 * hand, the disabled unused branch of a tunable would be discarded.
+	 * is about tunable, caculate its state value and concatenate one of
+	 * its avrule list to the current decl->avrules list.
 	 *
 	 * Note, such tunable cond_node would be skipped over in expansion,
 	 * so we won't have to worry about removing it from decl->cond_list
 	 * here :-)
 	 *
-	 * If tunables are requested to be preserved then they would be
-	 * "transformed" as booleans by having their TUNABLE flag cleared.
+	 * If tunables and booleans co-exist in the expression of a cond_node,
+	 * then tunables would be "transformed" as booleans.
 	 */
 	for (block = pol->global; block != NULL; block = block->next) {
 		decl = block->enabled;
@@ -2717,12 +2713,10 @@ static void discard_tunables(sepol_handle_t *sh, policydb_t *pol)
 
 		for (cur_node = decl->cond_list; cur_node != NULL;
 		     cur_node = cur_node->next) {
-			int booleans, tunables, i;
+			int booleans, tunables;
 			cond_bool_datum_t *booldatum;
-			cond_bool_datum_t *tmp[COND_EXPR_MAXDEPTH];
 
 			booleans = tunables = 0;
-			memset(tmp, 0, sizeof(cond_bool_datum_t *) * COND_EXPR_MAXDEPTH);
 
 			for (cur_expr = cur_node->expr; cur_expr != NULL;
 			     cur_expr = cur_expr->next) {
@@ -2730,24 +2724,18 @@ static void discard_tunables(sepol_handle_t *sh, policydb_t *pol)
 					continue;
 				booldatum = pol->bool_val_to_struct[cur_expr->bool - 1];
 				if (booldatum->flags & COND_BOOL_FLAGS_TUNABLE)
-					tmp[tunables++] = booldatum;
+					tunables++;
 				else
 					booleans++;
 			}
 
 			/* bool_copy_callback() at link phase has ensured
 			 * that no mixture of tunables and booleans in one
-			 * expression. However, this would be broken by the
-			 * request to preserve tunables */
-			if (!preserve_tunables)
-				assert(!(booleans && tunables));
+			 * expression. */
+			assert(!(booleans && tunables));
 
-			if (booleans || preserve_tunables) {
+			if (booleans) {
 				cur_node->flags &= ~COND_NODE_FLAGS_TUNABLE;
-				if (tunables) {
-					for (i = 0; i < tunables; i++)
-						tmp[i]->flags &= ~COND_BOOL_FLAGS_TUNABLE;
-				}
 			} else {
 				cur_node->flags |= COND_NODE_FLAGS_TUNABLE;
 				cur_state = cond_evaluate_expr(pol, cur_node->expr);
@@ -2803,7 +2791,7 @@ int expand_module(sepol_handle_t * handle,
 	 * Originally this function is called at the very end of link phase,
 	 * however, we need to keep the linked policy intact for analysis
 	 * purpose. */
-	discard_tunables(handle, base);
+	discard_tunables(base);
 
 	expand_state_init(&state);
 
