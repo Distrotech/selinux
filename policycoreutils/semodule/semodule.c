@@ -45,7 +45,6 @@ static int no_reload;
 static int create_store;
 static int build;
 static int disable_dontaudit;
-static int preserve_tunables;
 
 static semanage_handle_t *sh = NULL;
 static char *store;
@@ -116,8 +115,6 @@ static void usage(char *progname)
 	printf("  -h,--help        print this message and quit\n");
 	printf("  -v,--verbose     be verbose\n");
 	printf("  -D,--disable_dontaudit	Remove dontaudits from policy\n");
-	printf("  -P,--preserve_tunables	Preserve tunables in policy\n");
-	printf("  -p,--path        use an alternate path for the policy root\n");
 }
 
 /* Sets the global mode variable to new_mode, but only if no other
@@ -161,7 +158,6 @@ static void parse_command_line(int argc, char **argv)
 		{"noreload", 0, NULL, 'n'},
 		{"build", 0, NULL, 'B'},
 		{"disable_dontaudit", 0, NULL, 'D'},
-		{"preserve_tunables", 0, NULL, 'P'},
 		{NULL, 0, NULL, 0}
 	};
 	int i;
@@ -170,7 +166,7 @@ static void parse_command_line(int argc, char **argv)
 	no_reload = 0;
 	create_store = 0;
 	while ((i =
-		getopt_long(argc, argv, "s:b:hi:lvqr:u:RnBDP", opts,
+		getopt_long(argc, argv, "s:b:hi:lvqr:u:RnBD", opts,
 			    NULL)) != -1) {
 		switch (i) {
 		case 'b':
@@ -209,9 +205,6 @@ static void parse_command_line(int argc, char **argv)
 			break;
 		case 'D':
 			disable_dontaudit = 1;
-			break;
-		case 'P':
-			preserve_tunables = 1;
 			break;
 		case '?':
 		default:{
@@ -430,8 +423,6 @@ int main(int argc, char *argv[])
 			semanage_set_disable_dontaudit(sh, 1);
 		else if (build)
 			semanage_set_disable_dontaudit(sh, 0);
-		if (preserve_tunables)
-			semanage_set_preserve_tunables(sh, 1);
 
 		result = semanage_commit(sh);
 	}
