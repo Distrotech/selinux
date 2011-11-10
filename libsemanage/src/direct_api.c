@@ -2536,7 +2536,7 @@ static int semanage_direct_remove_key(semanage_handle_t *sh,
 	/* remove directory */
 	ret = semanage_remove_directory(path);
 	if (ret != 0) {
-		ERR(sh, "Unable to remove module directory %s.", path);
+		ERR(sh, "Unable to remove module %s at priority %d.", modkey->name, modkey->priority);
 		status = -2;
 		goto cleanup;
 	}
