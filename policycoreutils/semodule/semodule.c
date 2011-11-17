@@ -114,7 +114,7 @@ static void usage(char *progname)
 	printf("  -l,--list-modules=[KIND]  display list of installed modules\n");
 	printf("     KIND:  standard  list highest priority, enabled, non-base modules\n");
 	printf("            full      list all modules\n");
-	printf("  -p,--priority=PRIORITY    set priority for following operations (1-999)\n");
+	printf("  -P,--priority=PRIORITY    set priority for following operations (1-999)\n");
 	printf("  -e,--enable=MODULE_NAME   enable module\n");
 	printf("  -d,--disable=MODULE_NAME  disable module\n");
 	printf("Other options:\n");
@@ -166,7 +166,7 @@ static void parse_command_line(int argc, char **argv)
 		{"noreload", 0, NULL, 'n'},
 		{"build", 0, NULL, 'B'},
 		{"disable_dontaudit", 0, NULL, 'D'},
-		{"priority", required_argument, NULL, 'p'},
+		{"priority", required_argument, NULL, 'P'},
 		{"enable", required_argument, NULL, 'e'},
 		{"disable", required_argument, NULL, 'd'},
 		{NULL, 0, NULL, 0}
@@ -218,7 +218,7 @@ static void parse_command_line(int argc, char **argv)
 		case 'D':
 			disable_dontaudit = 1;
 			break;
-		case 'p':
+		case 'P':
 			set_mode(PRIORITY_M, optarg);
 			break;
 		case 'e':
