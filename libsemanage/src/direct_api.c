@@ -21,6 +21,7 @@
 
 #include <sepol/module.h>
 #include <sepol/handle.h>
+#include <sepol/cil/cil.h>
 #include <selinux/selinux.h>
 
 #include <assert.h>
@@ -580,51 +581,26 @@ static int write_file(semanage_handle_t * sh,
 	return 0;
 }
 
-/* Writes a module (or a base) to the file given by a fully-qualified
- * 'filename'.	Returns 0 on success, -1 if file could not be written.
- */
-static int semanage_write_module(semanage_handle_t * sh,
-				 const char *filename,
-				 sepol_module_package_t * package)
+static int semanage_direct_update_user_extra(semanage_handle_t * sh, cil_db_t *cildb, sepol_policydb_t *policydb)
 {
-	struct sepol_policy_file *pf;
-	FILE *outfile;
-	int retval;
-	if (sepol_policy_file_create(&pf)) {
-		ERR(sh, "Out of memory!");
-		return -1;
-	}
-	if ((outfile = fopen(filename, "wb")) == NULL) {
-		sepol_policy_file_free(pf);
-		ERR(sh, "Could not open %s for writing.", filename);
-		return -1;
-	}
-	__fsetlocking(outfile, FSETLOCKING_BYCALLER);
-	sepol_policy_file_set_fp(pf, outfile);
-	sepol_policy_file_set_handle(pf, sh->sepolh);
-	retval = sepol_module_package_write(package, pf);
-	fclose(outfile);
-	sepol_policy_file_free(pf);
-	if (retval == -1) {
-		ERR(sh, "Error while writing module to %s.", filename);
-		return -1;
-	}
-	return 0;
-}
-static int semanage_direct_update_user_extra(semanage_handle_t * sh, sepol_module_package_t *base ) {
 	const char *ofilename = NULL;
 	int retval = -1;
+	char *data = NULL;
+	size_t size = 0;
 
 	dbase_config_t *pusers_extra = semanage_user_extra_dbase_policy(sh);
 
-	if (sepol_module_package_get_user_extra_len(base)) {
+	retval = cil_userprefixes_to_string(cildb, policydb, &data, &size);
+	if (retval != SEPOL_OK) {
+		goto cleanup;
+	}
+
+	if (size > 0) {
 		ofilename = semanage_path(SEMANAGE_TMP, SEMANAGE_USERS_EXTRA);
 		if (ofilename == NULL) {
 			return retval;
 		}
-		retval = write_file(sh, ofilename,
-				    sepol_module_package_get_user_extra(base),
-				    sepol_module_package_get_user_extra_len(base));
+		retval = write_file(sh, ofilename, data, size);
 		if (retval < 0)
 			return retval;
 
@@ -634,34 +610,41 @@ static int semanage_direct_update_user_extra(semanage_handle_t * sh, sepol_modul
 		retval =  pusers_extra->dtable->clear(sh, pusers_extra->dbase);
 	}
 
+cleanup:
+	free(data);
+
 	return retval;
 }
-	
 
-static int semanage_direct_update_seuser(semanage_handle_t * sh, sepol_module_package_t *base ) {
-
+static int semanage_direct_update_seuser(semanage_handle_t * sh, cil_db_t *cildb, sepol_policydb_t *policydb)
+{
 	const char *ofilename = NULL;
 	int retval = -1;
+	char *data = NULL;
+	size_t size = 0;
 
 	dbase_config_t *pseusers = semanage_seuser_dbase_policy(sh);
 
-	if (sepol_module_package_get_seusers_len(base)) {
-		ofilename = semanage_final_path(SEMANAGE_FINAL_TMP,
-						SEMANAGE_SEUSERS);
+	retval = cil_selinuxusers_to_string(cildb, policydb, &data, &size);
+	if (retval != SEPOL_OK) {
+		goto cleanup;
+	}
+
+	if (size > 0) {
+		ofilename = semanage_final_path(SEMANAGE_FINAL_TMP, SEMANAGE_SEUSERS);
 		if (ofilename == NULL) {
 			return -1;
 		}
-		retval = write_file(sh, ofilename,
-				    sepol_module_package_get_seusers(base),
-				    sepol_module_package_get_seusers_len(base));
-		if (retval < 0)
-			return retval;
-		
+		retval = write_file(sh, ofilename, data, size);
+
 		pseusers->dtable->drop_cache(pseusers->dbase);
-		
 	} else {
 		retval = pseusers->dtable->clear(sh, pseusers->dbase);
 	}
+
+cleanup:
+	free(data);
+
 	return retval;
 }
 
@@ -673,12 +656,13 @@ static int semanage_direct_update_seuser(semanage_handle_t * sh, sepol_module_pa
 static int semanage_direct_commit(semanage_handle_t * sh)
 {
 	char **mod_filenames = NULL;
-	char *sorted_fc_buffer = NULL, *sorted_nc_buffer = NULL;
-	size_t sorted_fc_buffer_len = 0, sorted_nc_buffer_len = 0;
-	const char *linked_filename = NULL, *ofilename = NULL, *path;
-	sepol_module_package_t *base = NULL;
+	char *fc_buffer = NULL;
+	size_t fc_buffer_len = 0;
+	const char *ofilename = NULL;
+	const char *path;
 	int retval = -1, num_modfiles = 0, i;
 	sepol_policydb_t *out = NULL;
+	struct cil_db *cildb = NULL;
 
 	/* Declare some variables */
 	int modified = 0, fcontexts_modified, ports_modified,
@@ -740,6 +724,8 @@ static int semanage_direct_commit(semanage_handle_t * sh)
 	ports_modified = ports->dtable->is_modified(ports->dbase);
 
 	modified = sh->modules_modified;
+	modified |= seusers_modified;
+	modified |= users_extra_modified;
 	modified |= ports_modified;
 	modified |= users->dtable->is_modified(users_base->dbase);
 	modified |= bools->dtable->is_modified(bools->dbase);
@@ -749,74 +735,55 @@ static int semanage_direct_commit(semanage_handle_t * sh)
 
 	/* If there were policy changes, or explicitly requested, rebuild the policy */
 	if (sh->do_rebuild || modified) {
-
 		/* =================== Module expansion =============== */
 
-		/* link all modules in the sandbox to the base module */
 		retval = semanage_get_modules_names(sh, &mod_filenames, &num_modfiles);
 		if (retval < 0)
 			goto cleanup;
+
+		if (num_modfiles == 0) {
+			ERR(sh, "No active modules.\n");
+			goto cleanup;
+		}
+
 		retval = semanage_verify_modules(sh, mod_filenames, num_modfiles);
 		if (retval < 0)
 			goto cleanup;
-		retval = semanage_link_sandbox(sh, &base);
+
+		cil_db_init(&cildb);
+
+		retval = semanage_load_files(sh, cildb, mod_filenames, num_modfiles);
+		if (retval < 0) {
+			goto cleanup;
+		}
+		
+		sepol_policydb_create(&out);
+		out->p.policy_type = POLICY_KERN;
+		sepol_policydb_set_handle_unknown(out, sh->conf->handle_unknown);
+		sepol_policydb_set_vers(out, sh->conf->policyvers);
+		sepol_policydb_set_mls(out, sh->conf->mls);
+		sepol_policydb_set_target_platform(out, sh->conf->target_platform);
+
+		retval = cil_compile(cildb, out);
 		if (retval < 0)
 			goto cleanup;
 
-		/* write the linked base if we want to save or we have a
-		 * verification program that wants it. */
-		linked_filename = semanage_path(SEMANAGE_TMP, SEMANAGE_LINKED);
-		if (linked_filename == NULL) {
-			retval = -1;
+		retval = cil_build_policydb(cildb, out);
+		if (retval < 0)
 			goto cleanup;
-		}
-		if (sh->conf->save_linked || sh->conf->linked_prog) {
-			retval = semanage_write_module(sh, linked_filename, base);
-			if (retval < 0)
-				goto cleanup;
-			retval = semanage_verify_linked(sh);
-			if (retval < 0)
-				goto cleanup;
-			/* remove the linked policy if we only wrote it for the
-			 * verification program. */
-			if (!sh->conf->save_linked) {
-				retval = unlink(linked_filename);
-				if (retval < 0) {
-					ERR(sh, "could not remove linked base %s",
-					    linked_filename);
-					goto cleanup;
-				}
-			}
-		} else {
-			/* Try to delete the linked copy - this is needed if
-			 * the save_link option has changed to prevent the
-			 * old linked copy from being copied forever. No error
-			 * checking is done because this is likely to fail because
-			 * the file does not exist - which is not an error. */
-			unlink(linked_filename);
-			errno = 0;
-		}
-
-		/* ==================== File-backed ================== */
 
 		/* File Contexts */
-		/* Sort the file contexts. */
-		retval = semanage_fc_sort(sh, sepol_module_package_get_file_contexts(base),
-					  sepol_module_package_get_file_contexts_len(base),
-					  &sorted_fc_buffer, &sorted_fc_buffer_len);
+		retval = cil_filecons_to_string(cildb, out, &fc_buffer, &fc_buffer_len);
 		if (retval < 0)
 			goto cleanup;
 
-		/* Write the contexts (including template contexts) to a single file.  
-		 * The buffer returned by the sort function has a trailing \0 character,
-		 * which we do NOT want to write out to disk, so we pass sorted_fc_buffer_len-1. */
+		/* Write the contexts (including template contexts) to a single file. */
 		ofilename = semanage_path(SEMANAGE_TMP, SEMANAGE_FC_TMPL);
 		if (ofilename == NULL) {
 			retval = -1;
 			goto cleanup;
 		}
-		retval = write_file(sh, ofilename, sorted_fc_buffer,
-				    sorted_fc_buffer_len - 1);
+		retval = write_file(sh, ofilename, fc_buffer, fc_buffer_len);
 		if (retval < 0)
 			goto cleanup;
 
@@ -827,48 +794,21 @@ static int semanage_direct_commit(semanage_handle_t * sh)
 
 		pfcontexts->dtable->drop_cache(pfcontexts->dbase);
 
-		retval = semanage_direct_update_seuser(sh, base );
+		/* SEUsers */
+		retval = semanage_direct_update_seuser(sh, cildb, out);
 		if (retval < 0)
 			goto cleanup;
 
-		retval = semanage_direct_update_user_extra(sh, base );
+		/* User Extra */
+		retval = semanage_direct_update_user_extra(sh, cildb, out);
 		if (retval < 0)
 			goto cleanup;
 
-		/* Netfilter Contexts */
-		/* Sort the netfilter contexts. */
-		retval = semanage_nc_sort
-		    (sh, sepol_module_package_get_netfilter_contexts(base),
-		     sepol_module_package_get_netfilter_contexts_len(base),
-		     &sorted_nc_buffer, &sorted_nc_buffer_len);
-
-		if (retval < 0)
-			goto cleanup;
-
-		/* Write the contexts to a single file.  The buffer returned by
-		 * the sort function has a trailing \0 character, which we do
-		 * NOT want to write out to disk, so we pass sorted_fc_buffer_len-1. */
-		ofilename = semanage_final_path(SEMANAGE_FINAL_TMP,
-						SEMANAGE_NC);
-		retval = write_file
-		    (sh, ofilename, sorted_nc_buffer, sorted_nc_buffer_len - 1);
-
-		if (retval < 0)
-			goto cleanup;
+		cil_db_destroy(&cildb);
 
 		/* ==================== Policydb-backed ================ */
 
-		/* Create new policy object, then attach to policy databases
-		 * that work with a policydb */
-		retval = semanage_expand_sandbox(sh, base, &out);
-		if (retval < 0)
-			goto cleanup;
-	
-		sepol_module_package_free(base);
-		base = NULL;
-
-		dbase_policydb_attach((dbase_policydb_t *) pusers_base->dbase,
-				      out);
+		dbase_policydb_attach((dbase_policydb_t *) pusers_base->dbase, out);
 		dbase_policydb_attach((dbase_policydb_t *) pports->dbase, out);
 		dbase_policydb_attach((dbase_policydb_t *) pifaces->dbase, out);
 		dbase_policydb_attach((dbase_policydb_t *) pbools->dbase, out);
@@ -887,41 +827,8 @@ static int semanage_direct_commit(semanage_handle_t * sh)
 		retval = semanage_verify_kernel(sh);
 		if (retval < 0)
 			goto cleanup;
-	} else {
-		retval = sepol_policydb_create(&out);
-		if (retval < 0)
-			goto cleanup;
-
-		retval = semanage_read_policydb(sh, out);
-		if (retval < 0)
-			goto cleanup;
-		
-		if (seusers_modified || users_extra_modified) {
-			retval = semanage_link_base(sh, &base);
-			if (retval < 0)
-				goto cleanup;
-
-			if (seusers_modified) {
-				retval = semanage_direct_update_seuser(sh, base );
-				if (retval < 0)
-					goto cleanup;
-			}
-			if (users_extra_modified) {
-				/* Users_extra */
-				retval = semanage_direct_update_user_extra(sh, base );
-				if (retval < 0)
-					goto cleanup;
-			}
-
-			sepol_module_package_free(base);
-			base = NULL;
-		}
-
-		retval = semanage_base_merge_components(sh);
-		if (retval < 0)
-		  goto cleanup;
-
 	}
+
 	/* ======= Post-process: Validate non-policydb components ===== */
 
 	/* Validate local modifications to file contexts.
@@ -935,7 +842,7 @@ static int semanage_direct_commit(semanage_handle_t * sh)
 	}
 
 	/* Validate local seusers against policy */
-	if (sh->do_rebuild || modified || seusers_modified) {
+	if (sh->do_rebuild || seusers_modified) {
 		retval = semanage_seuser_validate_local(sh, out);
 		if (retval < 0)
 			goto cleanup;
@@ -974,8 +881,7 @@ static int semanage_direct_commit(semanage_handle_t * sh)
 	sepol_policydb_free(out);
 	out = NULL;
 
-	if (sh->do_rebuild || modified || 
-	    seusers_modified || fcontexts_modified || users_extra_modified) {
+	if (sh->do_rebuild || modified || fcontexts_modified) {
 		retval = semanage_install_sandbox(sh);
 	}
 
@@ -995,10 +901,10 @@ static int semanage_direct_commit(semanage_handle_t * sh)
 
 	free(mod_filenames);
 	sepol_policydb_free(out);
+	cil_db_destroy(&cildb);
 	semanage_release_trans_lock(sh);
 
-	free(sorted_fc_buffer);
-	free(sorted_nc_buffer);
+	free(fc_buffer);
 
 	/* regardless if the commit was successful or not, remove the
 	   sandbox if it is still there */
