@@ -52,6 +52,7 @@ static uint16_t priority;
 
 static semanage_handle_t *sh = NULL;
 static char *store;
+static char *root;
 
 extern char *optarg;
 extern int optind;
@@ -78,6 +79,20 @@ static void set_store(char *storename)
 	 * should support an address for a remote connection */
 
 	if ((store = strdup(storename)) == NULL) {
+		fprintf(stderr, "Out of memory!\n");
+		goto bad;
+	}
+
+	return;
+
+      bad:
+	cleanup();
+	exit(1);
+}
+
+static void set_root(char *path)
+{
+	if ((root = strdup(path)) == NULL) {
 		fprintf(stderr, "Out of memory!\n");
 		goto bad;
 	}
@@ -123,6 +138,7 @@ static void usage(char *progname)
 	printf("  -h,--help        print this message and quit\n");
 	printf("  -v,--verbose     be verbose\n");
 	printf("  -D,--disable_dontaudit	Remove dontaudits from policy\n");
+	printf("  -p,--path        use a different installation path\n");
 }
 
 /* Sets the global mode variable to new_mode, but only if no other
@@ -169,6 +185,7 @@ static void parse_command_line(int argc, char **argv)
 		{"priority", required_argument, NULL, 'P'},
 		{"enable", required_argument, NULL, 'e'},
 		{"disable", required_argument, NULL, 'd'},
+		{"path", required_argument, NULL, 'p'},
 		{NULL, 0, NULL, 0}
 	};
 	int i;
@@ -178,7 +195,7 @@ static void parse_command_line(int argc, char **argv)
 	create_store = 0;
 	priority = 400;
 	while ((i =
-		getopt_long(argc, argv, "s:b:hi:l::vqr:u:RnBDp:e:d:", opts,
+		getopt_long(argc, argv, "s:b:hi:l::vqr:u:RnBDp:e:d:p:", opts,
 			    NULL)) != -1) {
 		switch (i) {
 		case 'b':
@@ -205,6 +222,9 @@ static void parse_command_line(int argc, char **argv)
 			break;
 		case 's':
 			set_store(optarg);
+			break;
+		case 'p':
+			set_root(optarg);
 			break;
 		case 'R':
 			reload = 1;
@@ -297,6 +317,10 @@ int main(int argc, char *argv[])
 		 * option will need to be used later to specify a policy server 
 		 * location */
 		semanage_select_store(sh, store, SEMANAGE_CON_DIRECT);
+	}
+
+	if (root) {
+		semanage_set_root(sh, root);
 	}
 
 	/* if installing base module create store if necessary, for bootstrapping */
