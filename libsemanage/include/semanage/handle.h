@@ -126,6 +126,9 @@ int semanage_is_connected(semanage_handle_t * sh);
 /* returns 1 if policy is MLS, 0 otherwise. */
 int semanage_mls_enabled(semanage_handle_t *sh);
 
+/* set the root path for semanage output files */
+void semanage_set_root(semanage_handle_t *sh, const char *path);
+
 /* META NOTES
  *
  * For all functions a non-negative number indicates success. For some
