@@ -242,6 +242,8 @@ if __name__ == "__main__":
 			  help="Output debug information")
 	parser.add_option("-c", "--clean", dest="clean", action="store_true", default=False,
 			  help="Clean old modules directory after migrate (default: no)")
+	parser.add_option("-n", "--norebuild", dest="norebuild", action="store_true", default=False,
+			  help="Disable rebuilding policy after migration (default: no)")
 
 	(options, args) = parser.parse_args()
 
@@ -249,6 +251,7 @@ if __name__ == "__main__":
 	PRIORITY = options.priority
 	TYPE = options.store
 	CLEAN = options.clean
+	NOREBUILD = options.norebuild
 
 	# List of paths that go in the active 'root'
 	TOPPATHS = [
@@ -297,5 +300,6 @@ if __name__ == "__main__":
 				print >> sys.stderr, "warning: Unable to remove old store modules directory %s. Cleaning failed." % oldmodules_path(store)
 			shutil.rmtree(oldmodules_path(store), onerror=remove_error)
 
-	rebuild_policy()
+	if NOREBUILD is False:
+		rebuild_policy()
 
