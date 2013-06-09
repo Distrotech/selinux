@@ -2,7 +2,7 @@
 PREFIX ?= $(DESTDIR)/usr
 INCLUDEDIR ?= $(PREFIX)/include
 LIBDIR ?= $(PREFIX)/lib
-SHLIBDIR ?= $(DESTDIR)/lib
+SHLIBDIR ?= $(PREFIX)/lib
 LIBBASE=$(shell basename $(LIBDIR))
 
 VERSION = $(shell cat ../VERSION)
@@ -21,7 +21,7 @@ all: $(LIBA) $(LIBSO) $(LIBPC)
 
 $(LIBA):  $(OBJS)
 	$(AR) rcs $@ $^
-	ranlib $@
+	$(RANLIB) $@
 
 $(LIBSO): $(LOBJS)
 	$(CC) $(CFLAGS) $(LDFLAGS) -shared -o $@ $^ -Wl,-soname,$(LIBSO),--version-script=libsepol.map,-z,defs
