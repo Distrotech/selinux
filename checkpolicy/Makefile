@@ -10,16 +10,16 @@ TARGETS = checkpolicy checkmodule
 
 YACC = bison -y
 
-CFLAGS ?= -g -Wall -Werror -Wshadow -O2 -pipe -fno-strict-aliasing
+SE_CFLAGS ?= -g -Wall -Werror -Wshadow -O2 -pipe -fno-strict-aliasing $(CFLAGS)
 
-override CFLAGS += -I. -I${INCLUDEDIR}
+override SE_CFLAGS += -I. -I${INCLUDEDIR}
 
 CHECKOBJS = y.tab.o lex.yy.o queue.o module_compiler.o parse_util.o \
 	    policy_define.o
 CHECKPOLOBJS = $(CHECKOBJS) checkpolicy.o
 CHECKMODOBJS = $(CHECKOBJS) checkmodule.o
 
-LDLIBS=$(LIBDIR)/libsepol.a -lfl
+LDLIBS=-shared -fpic -lsepol -lfl
 
 GENERATED=lex.yy.c y.tab.c y.tab.h
 
@@ -31,13 +31,13 @@ checkpolicy: $(CHECKPOLOBJS)
 checkmodule: $(CHECKMODOBJS)
 
 %.o: %.c 
-	$(CC) $(CFLAGS) -o $@ -c $<
+	$(CC) $(SE_CFLAGS) -o $@ -c $<
 
 y.tab.o: y.tab.c
-	$(CC) $(filter-out -Werror, $(CFLAGS)) -o $@ -c $<
+	$(CC) $(filter-out -Werror, $(SE_CFLAGS)) -o $@ -c $<
 
 lex.yy.o: lex.yy.c
-	$(CC) $(filter-out -Werror, $(CFLAGS)) -o $@ -c $<
+	$(CC) $(filter-out -Werror, $(SE_CFLAGS)) -o $@ -c $<
 
 y.tab.c: policy_parse.y
 	$(YACC) -d policy_parse.y
