@@ -6,10 +6,10 @@ BINDIR=$(PREFIX)/bin
 LIBDIR=$(PREFIX)/lib
 INCLUDEDIR ?= $(PREFIX)/include
 
-CFLAGS ?= -g -Wall -W -Werror -O2 -pipe
-override CFLAGS += -I$(INCLUDEDIR)
+SE_CFLAGS ?= -g -Wall -W -Werror -O2 -pipe
+override SE_CFLAGS += -I$(INCLUDEDIR) $(CFLAGS)
 
-LDLIBS=-lfl -lselinux $(LIBDIR)/libsepol.a -L$(LIBDIR)
+LDLIBS=-shared -fPIC -lfl -lselinux -lsepol -L$(LIBDIR)
 
 all: dispol dismod
 
