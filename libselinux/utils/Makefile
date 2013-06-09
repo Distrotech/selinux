@@ -1,6 +1,5 @@
 # Installation directories.
 PREFIX ?= $(DESTDIR)/usr
-LIBDIR ?= $(PREFIX)/lib
 USRBINDIR ?= $(PREFIX)/sbin
 SBINDIR ?= $(DESTDIR)/sbin
 
@@ -24,7 +23,7 @@ CFLAGS ?= -O -Wall -W -Wundef -Wformat-y2k -Wformat-security -Winit-self -Wmissi
           -fipa-pure-const -Wno-suggest-attribute=pure -Wno-suggest-attribute=const \
           -Werror -Wno-aggregate-return -Wno-redundant-decls
 override CFLAGS += -I../include -D_GNU_SOURCE $(EMFLAGS)
-LDLIBS += -L../src -lselinux -L$(LIBDIR)
+LDLIBS += -L../src -lselinux -ldl -lsepol -lpcre
 
 TARGETS=$(patsubst %.c,%,$(wildcard *.c))
 
