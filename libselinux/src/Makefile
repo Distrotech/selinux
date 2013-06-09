@@ -127,7 +127,7 @@ $(AUDIT2WHYLOBJ): audit2why.c
 	$(CC) $(filter-out -Werror, $(SE_CFLAGS)) $(PYINC) -fPIC -DSHARED -c -o $@ $<
 
 $(AUDIT2WHYSO): $(AUDIT2WHYLOBJ)
-	$(CC) $(SE_CFLAGS) -shared -o $@ $^ -L. $(SE_LDFLAGS) -lselinux $(LIBDIR)/libsepol.a -L$(LIBDIR)
+	$(CC) $(SE_CFLAGS) -shared -o $@ $^ -L. $(SE_LDFLAGS) -lselinux -lsepol -L$(LIBDIR)
 
 %.o:  %.c policy.h
 	$(CC) $(SE_CFLAGS) $(TLSFLAGS) -c -o $@ $<
