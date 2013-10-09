@@ -65,8 +65,8 @@ class AuditToPolicy:
                           help="generate a module package - conflicts with -o and -m")
         parser.add_option("-o", "--output", dest="output",
                           help="append output to <filename>, conflicts with -M")
-        parser.add_option("-D", "--dontaudit", action="store_true", 
-                          dest="dontaudit", default=False, 
+        parser.add_option("-D", "--dontaudit", action="store_true",
+                          dest="dontaudit", default=False,
                           help="generate policy with dontaudit rules")
         parser.add_option("-R", "--reference", action="store_true", dest="refpolicy",
                           default=True, help="generate refpolicy style output")
@@ -269,12 +269,10 @@ class AuditToPolicy:
                     continue
 
                 if rc == audit2why.CONSTRAINT:
-                    print "\t\tPolicy constraint violation.\n"
-                    print "\t\tMay require adding a type attribute to the domain or type to satisfy the constraint.\n"
-                    print "\t\tConstraints are defined in the policy sources in policy/constraints (general), policy/mcs (MCS), and policy/mls (MLS).\n"
-                    for reason in data:
-                        print "\t\tNote: Possible cause is the source and target %s differ\n" % reason
-                    continue
+                    print #!!!! This avc is a constraint violation.  You would need to modify the attributes of either the source or target types to allow this access.\n"
+                    print "#Constraint rule: \n\t" + data[0]
+                    for reason in data[1:]:
+                        print "#\tPossible cause is the source %s and target %s are different.\n\b" % reason
 
                 if rc == audit2why.RBAC:
                     print "\t\tMissing role allow rule.\n"
@@ -285,7 +283,7 @@ class AuditToPolicy:
             return
 
     def __output(self):
-        
+
         if self.__options.audit2why:
             try:
                 return self.__output_audit2why()
@@ -350,6 +348,9 @@ class AuditToPolicy:
         except KeyboardInterrupt:
             sys.exit(0)
         except ValueError, e:
+            print e
+            sys.exit(1)
+        except IOError, e:
             print e
             sys.exit(1)
 
