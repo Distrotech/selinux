@@ -22,6 +22,9 @@ clean:
 	$(PYTHON) setup.py clean
 	-rm -rf build *~ \#* *pyc .#*
 
+test:
+	@python test_sepolicy.py -v
+
 install:
 	$(PYTHON) setup.py install `test -n "$(DESTDIR)" && echo --root $(DESTDIR)`
 	[ -d $(BINDIR) ] || mkdir -p $(BINDIR)
