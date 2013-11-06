@@ -1,4 +1,4 @@
-SUBDIRS=libsepol libselinux libsemanage sepolgen checkpolicy # policy
+SUBDIRS=libsepol libselinux libsemanage sepolgen #checkpolicy # policy
 #SUBDIRS += $(shell test -x /usr/bin/python && echo policycoreutils)
 PYSUBDIRS=libselinux libsemanage
 DISTCLEANSUBIDRS=libselinux libsemanage

@@ -23,7 +23,7 @@ CFLAGS ?= -O -Wall -W -Wundef -Wformat-y2k -Wformat-security -Winit-self -Wmissi
           -fipa-pure-const -Wno-suggest-attribute=pure -Wno-suggest-attribute=const \
           -Werror -Wno-aggregate-return -Wno-redundant-decls
 override CFLAGS += -I../include -D_GNU_SOURCE $(EMFLAGS)
-LDLIBS += -L../src -lselinux -ldl -lsepol -lpcre
+LDLIBS += -L../../libsepol/src/ -L../src -lselinux -ldl -lsepol -lpcre -lpthread
 
 TARGETS=$(patsubst %.c,%,$(wildcard *.c))
 
