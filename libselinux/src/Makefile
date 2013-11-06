@@ -75,7 +75,7 @@ SE_CFLAGS ?= -O2 -Wall -W -Wundef -Wformat-y2k -Wformat-security -Winit-self -Wm
           -fstack-protector-all --param=ssp-buffer-size=4 -fexceptions \
           -fasynchronous-unwind-tables -fdiagnostics-show-option -funit-at-a-time \
           -fipa-pure-const -Wno-suggest-attribute=pure -Wno-suggest-attribute=const \
-          -Wno-aggregate-return -Wno-redundant-decls $(CFLAGS)
+          -Wno-aggregate-return -Wno-redundant-decls $(CFLAGS) -I../../libsepol/include -fPIC
 
 override SE_CFLAGS += -I../include -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 $(EMFLAGS)
 
