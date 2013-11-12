@@ -21,7 +21,7 @@ CFLAGS ?= -O -Wall -W -Wundef -Wformat-y2k -Wformat-security -Winit-self -Wmissi
           -fstack-protector-all --param=ssp-buffer-size=4 -fexceptions \
           -fasynchronous-unwind-tables -fdiagnostics-show-option -funit-at-a-time \
           -fipa-pure-const -Wno-suggest-attribute=pure -Wno-suggest-attribute=const \
-          -Werror -Wno-aggregate-return -Wno-redundant-decls
+          -Wno-aggregate-return -Wno-redundant-decls
 override CFLAGS += -I../include -D_GNU_SOURCE $(EMFLAGS)
 LDLIBS += -L../../libsepol/src/ -L../src -lselinux -ldl -lsepol -lpcre -lpthread
 
