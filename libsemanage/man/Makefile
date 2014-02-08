@@ -1,6 +1,6 @@
 # Installation directories.
-MAN3DIR ?= $(DESTDIR)/usr/share/man/man3
-MAN5DIR ?= $(DESTDIR)/usr/share/man/man5
+MAN3DIR = $(DESTDIR)/usr/share/man/man3
+MAN5DIR = $(DESTDIR)/usr/share/man/man5
 
 all:
 

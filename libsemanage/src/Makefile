@@ -7,7 +7,7 @@ RUBY ?= ruby
 RUBYPREFIX ?= $(notdir $(RUBY))
 
 # Installation directories.
-PREFIX ?= $(DESTDIR)/usr
+PREFIX = $(DESTDIR)/usr
 LIBDIR ?= $(PREFIX)/lib
 SHLIBDIR ?= $(PREFIX)/lib
 #INCLUDEDIR ?= $(PREFIX)/include

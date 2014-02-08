@@ -1,5 +1,5 @@
 # Installation directories.
-PREFIX ?= $(DESTDIR)/usr
+PREFIX = $(DESTDIR)/usr
 INCDIR ?= $(PREFIX)/include/semanage
 
 all:
