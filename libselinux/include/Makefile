@@ -1,6 +1,6 @@
 # Installation directories.
-PREFIX ?= $(DESTDIR)/usr
-INCDIR ?= $(PREFIX)/include/selinux
+PREFIX = $(DESTDIR)/usr
+INCDIR = $(PREFIX)/include/selinux
 
 all:
 
